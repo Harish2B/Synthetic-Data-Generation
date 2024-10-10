@@ -11,6 +11,7 @@ import configparser
 import pandas as pd
 from Time_Series_Generator import Time_Series_Generator
 from synthetic_data_generation import synthetic_data_generation
+from smoothing import SmoothingFunction
 from apply_relationship import apply_relationship
 from DataNoiser import DataNoiser
 from Datavisualizer import DataVisualizer
@@ -28,13 +29,15 @@ class SyntheticDataGenerator:
         constraints = {}
         for key, value in self.config['Constraints'].items():
             attr, constraint_info = value.split(':')
-            min_val, max_val, seasonality, temporal_pattern, amplitude = constraint_info.split(',')
+            min_val, max_val, seasonality, temporal_pattern, amplitude, smoothing_percentage = constraint_info.split(
+                ',')
             constraints[attr] = {
                 'min': float(min_val),
                 'max': float(max_val),
                 'seasonality': seasonality.strip(),
                 'temporal_pattern': temporal_pattern.strip(),
-                'amplitude': float(amplitude.strip())  # Store amplitude as well
+                'amplitude': float(amplitude.strip()),
+                'smoothing_percentage': float(smoothing_percentage.strip())  # Store smoothing percentage as well
             }
         return constraints
 
@@ -73,31 +76,35 @@ class SyntheticDataGenerator:
         relationships = self.get_relationships()
 
         # Generate synthetic data with constraints
-        synthetic_data = synthetic_data_generation(attributes, num_records, constraints)
+        synthetic_data = synthetic_data_generation(attributes, num_records,constraints)
         synthetic_data = synthetic_data.synthetic_data_generator()
 
-        # Apply relationships to the generated data
-        apply_relationship_formula = apply_relationship(synthetic_data, relationships, constraints)
-        synthetic_data = apply_relationship_formula.apply_relationships()
+        for attr in attributes:
+            smoother = SmoothingFunction(constraints[attr]['smoothing_percentage'])
+            synthetic_data[attr] = smoother.smooth(synthetic_data[attr])
 
         # Apply temporal pattern and seasonality to the synthetic data
         for i, attr in enumerate(attributes):
             trend_type = constraints[attr]['temporal_pattern']
             trend_value = constraints[attr]['amplitude']
             seasonality_type = constraints[attr]['seasonality']
-            min_val=constraints[attr]['min']
-            max_val=constraints[attr]['max']
+            min_val = constraints[attr]['min']
+            max_val = constraints[attr]['max']
 
             # Call the temporal pattern function to add temporal characteristics
-            temporal_pattern_generator = TemporalPatternGenerator(num_records, trend_type, trend_value,min_val,max_val)
+            temporal_pattern_generator = TemporalPatternGenerator(num_records, trend_type, trend_value, min_val,max_val)
             temporal_pattern = temporal_pattern_generator.generate_temporal_pattern()
 
             # Call the seasonality function to add seasonal characteristics
-            seasonal_pattern_generator = SeasonalPatternGenerator(num_records, seasonality_type,min_val,max_val)
+            seasonal_pattern_generator = SeasonalPatternGenerator(num_records, seasonality_type, min_val, max_val)
             seasonal_pattern = seasonal_pattern_generator.generate_seasonal_pattern()
 
             # Apply temporal pattern and seasonality to the attribute
-            synthetic_data[attr] = synthetic_data[attr] +temporal_pattern + seasonal_pattern
+            synthetic_data[attr] = synthetic_data[attr] + temporal_pattern + seasonal_pattern
+
+            # Apply relationships to the generated data
+            apply_relationship_formula = apply_relationship(synthetic_data, relationships, constraints)
+            synthetic_data = apply_relationship_formula.apply_relationships()
 
         # Create a DataFrame from the synthetic data
         df = pd.DataFrame(synthetic_data)

@@ -109,6 +109,11 @@ class MainApplication:
         self.trend_value_entry = ttk.Entry(self.constraints_frame)
         self.trend_value_entry.pack()
 
+        self.smooth_percentage_label = ttk.Label(self.constraints_frame, text="Enter the smoothing value(0-1):")
+        self.smooth_percentage_label.pack()
+        self.smooth_percentage_entry = ttk.Entry(self.constraints_frame)
+        self.smooth_percentage_entry.pack()
+
         # Create add constraint button
         self.constraints_button = ttk.Button(self.constraints_frame, text="Add", command=self.add_constraint)
         self.constraints_button.pack()
@@ -296,13 +301,14 @@ class MainApplication:
             temporal_pattern = self.trend_type_var.get()
             seasonality = self.seasonality_var.get()
             amplitude=self.trend_value_entry.get()
+            smooth_percentage=self.smooth_percentage_entry.get()
             if not attribute or not min_val or not max_val:
                 raise ValueError("All fields are required")
             min_val = float(min_val)
             max_val = float(max_val)
             if min_val >= max_val:
                 raise ValueError("Minimum value cannot be greater than or equal to maximum value")
-            self.constraints_listbox.insert(tk.END, f"{attribute}:{min_val},{max_val},{seasonality},{temporal_pattern},{amplitude}")
+            self.constraints_listbox.insert(tk.END, f"{attribute}:{min_val},{max_val},{seasonality},{temporal_pattern},{amplitude},{smooth_percentage}")
             self.min_entry.delete(0, tk.END)
             self.max_entry.delete(0, tk.END)
         except ValueError as e:

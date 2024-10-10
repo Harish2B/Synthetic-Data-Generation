@@ -2,8 +2,8 @@
 In this module, we are visualising the relationship between the attributes which are generated with a relationship using a scatterplot.
 """
 import matplotlib.pyplot as plt
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-from scipy.signal import welch
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+import pandas as pd
 
 class DataVisualizer:
     def __init__(self, data, relationships):
@@ -28,7 +28,7 @@ class DataVisualizer:
             plt.show()
 
             # Plot the synthetic data
-            '''plt.figure(figsize=(10, 6))
+            plt.figure(figsize=(10, 6))
             plt.scatter(self.data.index, self.data[dependent_attr])
             plt.title('Synthetic Data Over Time')
             plt.xlabel('Time')
@@ -42,28 +42,26 @@ class DataVisualizer:
             plt.xlabel('Time')
             plt.ylabel('Value')
             plt.show()
-
-            # Plot the autocorrelation function (ACF)
+            
+            # Fit the SARIMAX model
+            model = SARIMAX(self.data[dependent_attr], order=(1,1,1), seasonal_order=(1,1,1,12))
+            results = model.fit()
+            
+            # Plot the original data and the fitted values
             plt.figure(figsize=(10, 6))
-            plot_acf(self.data[dependent_attr], lags=30)
-            plt.title('Autocorrelation Function (ACF)')
-            plt.xlabel('Lag')
-            plt.ylabel('Correlation')
+            plt.plot(self.data[dependent_attr], label='Original Data')
+            plt.plot(results.fittedvalues, label='Fitted Values')
+            plt.title('SARIMAX Model')
+            plt.xlabel('Time')
+            plt.ylabel('Value')
+            plt.legend()
             plt.show()
 
-            # Plot the partial autocorrelation function (PACF)
+            # Plot the residuals
+            residuals = pd.DataFrame(results.resid)
             plt.figure(figsize=(10, 6))
-            plot_pacf(self.data[dependent_attr], lags=30)
-            plt.title('Partial Autocorrelation Function (PACF)')
-            plt.xlabel('Lag')
-            plt.ylabel('Correlation')
+            plt.plot(residuals)
+            plt.title('Residuals')
+            plt.xlabel('Time')
+            plt.ylabel('Value')
             plt.show()
-
-            # Plot the spectral density
-            freqs, psd = welch(self.data[dependent_attr])
-            plt.figure(figsize=(10, 6))
-            plt.plot(freqs, psd)
-            plt.title('Spectral Density')
-            plt.xlabel('Frequency')
-            plt.ylabel('Power')
-            plt.show()'''

@@ -22,29 +22,29 @@ class apply_relationship:
             dependent_values = []  # Define dependent_values here
 
             if relationship['type'] == 'linear':
-                slope = random.uniform(-0.5, 0.5)  # limit the slope to a reasonable range
-                intercept = random.uniform(-1, 1)  # limit the intercept to a reasonable range
+                slope = random.uniform(-0.1, 0.1)  # reduced range for slope
+                intercept = random.uniform(-0.3, 0.3)  # reduced range for intercept
                 dependent_values = [slope * x + intercept for x in self.data[independent_attrib]]
             elif relationship['type'] == 'parabolic':
-                a = random.uniform(-0.5, 0.5)  # limit the coefficient to a reasonable range
-                h = random.uniform(-5, 5)  # limit the horizontal shift to a reasonable range
-                k = random.uniform(-5, 5)  # limit the vertical shift to a reasonable range
+                a = random.uniform(-0.2, 0.2)  # reduced range for coefficient
+                h = random.uniform(-0.5, 0.5)  # reduced range for horizontal shift
+                k = random.uniform(-0.4, 0.4)  # reduced range for vertical shift
                 dependent_values = [a * (x - h) ** 2 + k for x in self.data[independent_attrib]]
             elif relationship['type'] == 'exponential':
-                a = random.uniform(0.5, 2)  # limit the coefficient to a reasonable range
-                b = random.uniform(-1, 1)  # limit the exponent to a reasonable range
+                a = random.uniform(0.8, 1.2)  # modified range for coefficient
+                b = random.uniform(-0.5, 0.5)  # reduced range for exponent
                 dependent_values = [a * np.exp(b * x) for x in self.data[independent_attrib]]
             elif relationship['type'] == 'sinusoidal':
-                a = random.uniform(-1, 1)  # limit the amplitude to a reasonable range
-                b = random.uniform(-1, 1)  # limit the frequency to a reasonable range
+                a = random.uniform(-0.2, 0.2)  # reduced range for amplitude
+                b = random.uniform(-0.5, 0.5)  # reduced range for frequency
                 dependent_values = [a * np.sin(b * x) for x in self.data[independent_attrib]]
             elif relationship['type'] == 'hyperbolic':
-                a = random.uniform(-1, 1)  # limit the coefficient to a reasonable range
-                b = random.uniform(-1, 1)  # limit the exponent to a reasonable range
+                a = random.uniform(-0.2, 0.2)  # reduced range for coefficient
+                b = random.uniform(-0.2, 0.2)  # reduced range for exponent
                 dependent_values = [a * (1 / (1 + b * x)) for x in self.data[independent_attrib]]
             elif relationship['type'] == 'sigmoid':
-                a = random.uniform(0.5, 2)  # limit the coefficient to a reasonable range
-                b = random.uniform(-0.5, 5)  # limit the shift to a reasonable range
+                a = random.uniform(0.8, 1.2)  # modified range for coefficient
+                b = random.uniform(-2, 2)  # modified range for shift
                 dependent_values = [1 / (1 + np.exp(-a * x + b)) for x in self.data[independent_attrib]]
             else:
                 raise ValueError("Invalid relationship type")
@@ -58,9 +58,13 @@ class apply_relationship:
             if dependent_values:  # Check if dependent_values is not empty
                 min_dep_val = min(dependent_values)
                 max_dep_val = max(dependent_values)
-                scaled_dependent_values = [(x - min_dep_val) / (max_dep_val - min_dep_val) * (max_val - min_val) + min_val for x in dependent_values]
+                denominator = max_dep_val - min_dep_val
+                if denominator == 0:  # Avoid division by zero
+                    denominator = 0.1 # Add a small value to the denominator
+                scaled_dependent_values = [(x - min_dep_val) / denominator * (max_val - min_val) + min_val for x in dependent_values]
             else:
                 scaled_dependent_values = []  # Define scaled_dependent_values as an empty list if dependent_values is empty
+            # Define scaled_dependent_values as an empty list if dependent_values is empty
 
             # Update the data with the scaled values
             self.data[independent_attrib] = scaled_independent_values
