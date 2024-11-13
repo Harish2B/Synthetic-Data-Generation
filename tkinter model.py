@@ -7,6 +7,7 @@ import subprocess
 
 class MainApplication:
     def __init__(self, root):
+        self.done_failures = None
         self.root = root
         self.config = configparser.ConfigParser()
         self.root.title("Synthetic Data Generator")
@@ -31,12 +32,14 @@ class MainApplication:
 
         self.attributes_tab = ttk.Frame(self.tabs)
         self.constraints_tab = ttk.Frame(self.tabs)
+        self.failures_tab = ttk.Frame(self.tabs)
         self.time_series_tab = ttk.Frame(self.tabs)
         self.relationships_tab = ttk.Frame(self.tabs)
         self.noise_tab = ttk.Frame(self.tabs)
 
         self.tabs.add(self.attributes_tab, text="Attributes")
         self.tabs.add(self.constraints_tab, text="Constraints")
+        self.tabs.add(self.failures_tab, text="Failures")
         self.tabs.add(self.time_series_tab, text="Time Series")
         self.tabs.add(self.relationships_tab, text="Relationships")
         self.tabs.add(self.noise_tab, text="Noise")
@@ -99,7 +102,7 @@ class MainApplication:
         self.trend_type_label.pack()
         self.trend_type_var = tk.StringVar()
         self.trend_type_var.set("increasing")
-        self.trend_type_options = ["increasing", "decreasing", "no changes"]
+        self.trend_type_options = ["increasing", "decreasing", "no change"]
         self.trend_type_menu = ttk.OptionMenu(self.constraints_frame, self.trend_type_var, *self.trend_type_options)
         self.trend_type_menu.pack()
 
@@ -125,6 +128,43 @@ class MainApplication:
         # Create done button
         self.done_constraints_button = ttk.Button(self.constraints_frame, text="Done", command=self.done_constraints)
         self.done_constraints_button.pack()
+
+        # Create failures frame
+        self.failures_frame = ttk.Frame(self.failures_tab)
+        self.failures_frame.pack(fill="both", expand=True)
+
+        self.attributes_var = tk.StringVar()
+        self.attributes_label = ttk.Label(self.failures_frame, text="Attributes:")
+        self.attributes_label.pack()
+        self.attributes_menu = ttk.OptionMenu(self.failures_frame, self.attributes_var)
+        self.attributes_menu.pack()
+
+        self.failure_rate_label = ttk.Label(self.failures_frame, text="Enter failure rate (0-1):")
+        self.failure_rate_label.pack()
+        self.failure_rate_entry = ttk.Entry(self.failures_frame)
+        self.failure_rate_entry.pack()
+
+        self.min_failure_label = ttk.Label(self.failures_frame, text="Enter minimum failure value:")
+        self.min_failure_label.pack()
+        self.min_failure_entry = ttk.Entry(self.failures_frame)
+        self.min_failure_entry.pack()
+
+        self.max_failure_label = ttk.Label(self.failures_frame, text="Enter maximum failure value:")
+        self.max_failure_label.pack()
+        self.max_failure_entry = ttk.Entry(self.failures_frame)
+        self.max_failure_entry.pack()
+
+        self.add_failure_button = ttk.Button(self.failures_frame, text="Add",command=self.add_failure_parameters)
+        self.add_failure_button.pack()
+
+        self.failures_listbox = tk.Listbox(self.failures_frame)
+        self.failures_listbox.pack()
+
+        self.done_failures_button = ttk.Button(self.failures_frame, text="Done",command=self.done_failures)
+        self.done_failures_button.pack()
+
+        def done_failures(self):
+            self.tabs.select(3)
 
         # Create time series frame
         self.time_series_frame = ttk.Frame(self.time_series_tab)
@@ -311,6 +351,34 @@ class MainApplication:
             self.constraints_listbox.insert(tk.END, f"{attribute}:{min_val},{max_val},{seasonality},{temporal_pattern},{amplitude},{smooth_percentage}")
             self.min_entry.delete(0, tk.END)
             self.max_entry.delete(0, tk.END)
+            self.smooth_percentage_entry.delete(0,tk.END)
+            self.trend_value_entry.delete(0,tk.END)
+        except ValueError as e:
+            tk.messagebox.showerror("Error", str(e))
+
+    def add_failure_parameters(self):
+        attribute = self.attributes_var.get()
+        failure_rate = self.failure_rate_entry.get()
+        min_failure = self.min_failure_entry.get()
+        max_failure = self.max_failure_entry.get()
+
+        if not attribute or not failure_rate or not min_failure or not max_failure:
+            tk.messagebox.showerror("Error", "All fields must be filled")
+            return
+
+        try:
+            failure_rate = float(failure_rate)
+            min_failure = float(min_failure)
+            max_failure = float(max_failure)
+
+            if failure_rate < 0 or failure_rate > 1:
+                raise ValueError("Failure rate must be between 0 and 1")
+            if min_failure >= max_failure:
+                raise ValueError("Minimum failure value must be less than maximum failure value")
+            self.failures_listbox.insert(tk.END, f"{attribute}:{failure_rate},{min_failure},{max_failure}")
+            self.failure_rate_entry.delete(0, tk.END)
+            self.min_failure_entry.delete(0, tk.END)
+            self.max_failure_entry.delete(0, tk.END)
         except ValueError as e:
             tk.messagebox.showerror("Error", str(e))
 
@@ -369,6 +437,10 @@ class MainApplication:
         self.config['Constraints'] = {}
         for i in range(self.constraints_listbox.size()):
             self.config['Constraints'][f'constraint_{i}'] = self.constraints_listbox.get(i)
+
+        self.config['Failures']= {}
+        for i in range(self.failures_listbox.size()):
+            self.config['Failures'][f'Failures_{i}'] = self.failures_listbox.get(i)
 
         self.config['Relationships'] = {}
         for i in range(self.relationship_listbox.size()):

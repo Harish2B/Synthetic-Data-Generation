@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.fftpack import fft
 from sklearn.preprocessing import StandardScaler
 
 class SeasonalPatternGenerator:
@@ -11,28 +12,29 @@ class SeasonalPatternGenerator:
     def generate_seasonal_pattern(self):
         time_indices = np.arange(self.num_records)
 
+        # Generate a random time series with a seasonal component
+        np.random.seed(0)
+        signal = np.random.normal(size=self.num_records)
+
         if self.seasonality_type == 'daily':
             frequency = 24  # Assuming hourly data
-            amplitude = 1  # Adjust amplitude as needed
-            seasonal_pattern = amplitude * np.sin(2 * np.pi * frequency * time_indices / self.num_records)
         elif self.seasonality_type == 'weekly':
             frequency = 7  # Weekly pattern
-            amplitude = 1
-            seasonal_pattern = amplitude * np.sin(2 * np.pi * frequency * time_indices / self.num_records)
         elif self.seasonality_type == 'monthly':
             frequency = 12  # Monthly pattern
-            amplitude = 1
-            seasonal_pattern = amplitude * np.sin(2 * np.pi * frequency * time_indices / self.num_records)
         elif self.seasonality_type == 'quarterly':
             frequency = 4  # Quarterly pattern
-            amplitude = 1
-            seasonal_pattern = amplitude * np.sin(2 * np.pi * frequency * time_indices / self.num_records)
         elif self.seasonality_type == 'yearly':
             frequency = 1  # Yearly pattern
-            amplitude = 1
-            seasonal_pattern = amplitude * np.sin(2 * np.pi * frequency * time_indices / self.num_records)
         else:
             raise ValueError("Invalid seasonality type. Choose from daily, weekly, monthly, quarterly, or yearly.")
+
+        # Add a seasonal component to the signal using Fourier analysis
+        fft_signal = fft(signal)
+        seasonal_component = np.real(fft_signal[:frequency])
+        seasonal_pattern = np.zeros_like(signal)
+        for i in range(frequency):
+            seasonal_pattern += seasonal_component[i] * np.sin(2 * np.pi * i * time_indices / self.num_records)
 
         # Scale the seasonal pattern using a StandardScaler
         scaler = StandardScaler()

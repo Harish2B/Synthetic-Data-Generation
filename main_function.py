@@ -3,7 +3,7 @@ this is a code to GENERATE SYNTHETIC DATA using a few inputs from the user. the 
 time series generator class calls the start time,end time and time interval which is a user input to create time stamp data.
 constraint calculator calls the range constraints set by the user for each attribute.
 synthetic data generation calls the random value generator function to substitute the constraints for the attribute and generate random values
-relationship generator and apply relationship class calls the user input for dependent attribute,independent attribute adn the type of relationship and generates the random values based on it
+relationship generator and apply relationship class calls the user input for dependent attribute,independent attribute and the type of relationship and generates the random values based on it
 datanoiser is the class which calls for the noise percentage and outlier percentage for the data which creates a realistic synthetic data
 datavisualizer class plots the synthetic data which has been created with the relationship and added noise and outliers.
 """
@@ -12,12 +12,13 @@ import pandas as pd
 from Time_Series_Generator import Time_Series_Generator
 from synthetic_data_generation import synthetic_data_generation
 from smoothing import SmoothingFunction
+from failures import generate_random_seasonal_failures
 from apply_relationship import apply_relationship
 from DataNoiser import DataNoiser
 from Datavisualizer import DataVisualizer
 from temporal_pattern import TemporalPatternGenerator
 from seasonality import SeasonalPatternGenerator
-
+import os
 class SyntheticDataGenerator:
     def __init__(self, config):
         self.config = config
@@ -29,8 +30,7 @@ class SyntheticDataGenerator:
         constraints = {}
         for key, value in self.config['Constraints'].items():
             attr, constraint_info = value.split(':')
-            min_val, max_val, seasonality, temporal_pattern, amplitude, smoothing_percentage = constraint_info.split(
-                ',')
+            min_val, max_val, seasonality, temporal_pattern, amplitude, smoothing_percentage = constraint_info.split(',')
             constraints[attr] = {
                 'min': float(min_val),
                 'max': float(max_val),
@@ -100,7 +100,8 @@ class SyntheticDataGenerator:
             seasonal_pattern = seasonal_pattern_generator.generate_seasonal_pattern()
 
             # Apply temporal pattern and seasonality to the attribute
-            synthetic_data[attr] = synthetic_data[attr] + temporal_pattern + seasonal_pattern
+            combined_pattern = temporal_pattern + seasonal_pattern
+            synthetic_data[attr]= synthetic_data[attr] + combined_pattern
 
             # Apply relationships to the generated data
             apply_relationship_formula = apply_relationship(synthetic_data, relationships, constraints)
@@ -112,6 +113,27 @@ class SyntheticDataGenerator:
         # Add timestamp to the DataFrame
         df['Time stamp'] = time_series_data
         df.set_index('Time stamp', inplace=True)
+
+        failures = {}
+        for key, value in self.config['Failures'].items():
+            attr, failures_info = value.split(':')
+            failure_percentage, min_failure, max_failure = failures_info.split(',')
+            failures[attr] = {
+                'failure_percentage': float(failure_percentage),
+                'min_failure': float(min_failure),
+                'max_failure': float(max_failure)
+            }
+
+        # Apply failures to the synthetic data
+        for attr, failure_params in failures.items():
+            failure_percentage = failure_params['failure_percentage']
+            min_failure = failure_params['min_failure']
+            max_failure = failure_params['max_failure']
+            seasonality_type = constraints[attr]['seasonality']
+
+            # Call the function to generate random peaks (failures)
+            df[attr] = generate_random_seasonal_failures(df[attr],failure_percentage,min_failure, max_failure,seasonality_type)
+
         return df
 
     def add_noise_and_outliers(self, df):
@@ -130,6 +152,21 @@ class SyntheticDataGenerator:
         visualizer = DataVisualizer(df, relationships)
         visualizer.visualize_relationships()
 
+    @staticmethod
+    def generate_unique_filename(filename):
+        base, ext = os.path.splitext(filename)
+        counter = 1
+        while True:
+            new_filename = f"{base}{counter}{ext}"
+            if not os.path.exists(new_filename):
+                return new_filename
+            counter += 1
+
+    def save_to_excel(self, df):
+        filename = self.generate_unique_filename('output.xlsx')
+        df.to_excel(filename, index=True)
+
+
 def main(config):
     # Initialize the SyntheticDataGenerator class
     generator = SyntheticDataGenerator(config)
@@ -144,7 +181,7 @@ def main(config):
     generator.visualize_relationships(df, generator.get_relationships())
 
     # Save DataFrame to Excel file
-    df.to_excel('output.xlsx', index=True)
+    generator.save_to_excel(df)
 if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read('config.ini')
